@@ -5,7 +5,7 @@ import maximum from './merge/maximum'
 import minimum from './merge/minimum'
 import multiply from './merge/multiply'
 import subtract from './merge/subtract'
-import conv2d from './convolutional/conv2d'
+import conv2d from './convolutional/conv2dCS'
 import conv2dTranspose from './convolutional/conv2dTranspose'
 import cam from './visualizations/cam'
 

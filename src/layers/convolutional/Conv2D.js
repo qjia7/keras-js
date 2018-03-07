@@ -438,9 +438,9 @@ export default class Conv2D extends Layer {
           this.useBias,
           hasFragments
         )
-        this.convProgram = webgl2.compileProgram(convProgramSource)
+        this.convProgram = webgl2.compileCSProgram(convProgramSource)
       }
-      webgl2.runProgram({
+      webgl2.runCSProgram({
         program: this.convProgram,
         output: this.activation === 'linear' ? this.output : this.outputPreactiv,
         inputs: [

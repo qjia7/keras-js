@@ -53,6 +53,44 @@ class WebGL2 {
     this.vertexShader = vertexShader
   }
 
+
+  /**
+   * Compiles compute shader from source and creates program from it.
+   *
+   * @param {string} source - compute shader GLSL source code
+   * @returns {WebGLProgram}
+   */
+  compileCSProgram(source) {
+    const gl = this.context
+
+    //console.log("----compute shader source ------\n" + source);
+    // create and compile compute shader
+    const computeShader = gl.createShader(gl.COMPUTE_SHADER)
+    gl.shaderSource(computeShader, source)
+    gl.compileShader(computeShader)
+
+    let success = gl.getShaderParameter(computeShader, gl.COMPILE_STATUS)
+    if (!success) {
+      console.error(gl.getShaderInfoLog(computeShader))
+      gl.deleteShader(computeShader)
+      this.isSupported = false
+    }
+
+    // create program and attach compiled shaders
+    const program = gl.createProgram()
+    gl.attachShader(program, computeShader)
+    gl.linkProgram(program)
+
+    success = gl.getProgramParameter(program, gl.LINK_STATUS)
+    if (!success) {
+      console.error(gl.getProgramInfoLog(program))
+      gl.deleteShader(computeShader)
+      this.isSupported = false
+    }
+
+    return program
+  }
+
   /**
    * Compiles fragment shader from source and creates program from it,
    * using our passthrough vertex shader.
@@ -199,6 +237,86 @@ class WebGL2 {
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer)
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, outputTexture, 0)
   }
+
+
+  /**
+   * Bind output image texture
+   *
+   * @param {WebGLTexture} outputTexture
+   * @param {number[]} shape
+   */
+  bindOutputImageTexture(outputTexture, shape) {
+    const gl = this.context
+
+    gl.viewport(0, 0, shape[1], shape[0])
+
+    this.framebuffer = this.framebuffer || gl.createFramebuffer()
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer)
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, outputTexture, 0)
+    gl.bindImageTexture(4, outputTexture, 0, gl.FALSE, 0, gl.WRITE_ONLY, gl.R32F)
+    if (gl.getError() != gl.NO_ERROR)
+    {
+      console.error('bindImageTexture failed')
+    }
+  }
+
+  /**
+   * Runs compute shader program, after binding output, inputs, and uniforms
+   *
+   * @param {WebGLProgram} options.program
+   * @param {Tensor} options.output
+   * @param {Object[]} options.inputs
+   * @param {Object[]} options.uniforms
+   */
+  runCSProgram({ program, output, inputs, uniforms, supportsTextureFragments = false }) {
+    if (!program) throw new Error('[WebGL2] missing program')
+    if (!output) throw new Error('[WebGL2] missing output')
+    if (!inputs) throw new Error('[WebGL2] missing inputs')
+
+    const gl = this.context
+    this.selectProgram(program)
+    if (uniforms && Array.isArray(uniforms)) {
+      this.bindUniforms(program, uniforms)
+    }
+
+    var glDispatchX = 0
+    var glDispatchY = 0
+    var local_size_x = 32
+    var local_size_y = 32
+    if (output.glTextureFragments) {
+      if (!supportsTextureFragments) {
+        throw new Error('[WebGL2] program does not support texture fragments')
+      }
+
+      const inputsWithFragments = inputs.filter(
+        obj => obj.input.glTextureFragments && !obj.input.glTextureFragmentsAsColStack
+      )
+      const numFragments = output.glTextureFragments.length
+      if (inputsWithFragments.some(obj => obj.input.glTextureFragments.length !== numFragments)) {
+        throw new Error('[WebGL2] number of texture fragments in inputs and output do not match')
+      }
+
+      for (let k = 0; k < numFragments; k++) {
+        this.bindOutputImageTexture(output.glTextureFragments[k], output.glTextureFragmentShape)
+        this.bindInputTextures(program, inputs, k)
+        glDispatchX = (output.glTextureFragmentShape[1] + local_size_x - 1)/local_size_x
+        glDispatchY = (output.glTextureFragmentShape[0] + local_size_y - 1)/local_size_y
+        gl.dispatchCompute(glDispatchX, glDispatchY, 1)
+        gl.memoryBarrier(gl.TEXTURE_UPDATE_BARRIER_BIT | gl.SHADER_IMAGE_ACCESS_BARRIER_BIT | gl.TEXTURE_FETCH_BARRIER_BIT)
+      }
+    } else {
+      this.bindOutputImageTexture(output.glTexture, output.glTextureShape)
+      this.bindInputTextures(program, inputs)
+      glDispatchX = (output.glTextureShape[1] + local_size_x - 1)/local_size_x
+      glDispatchY = (output.glTextureShape[0] + local_size_y - 1)/local_size_y
+      console.log('outputSize = (' + output.glTextureShape[1] + ', ' + output.glTextureShape[0] + ')');
+      console.log('GroupSize.xy = (' + glDispatchX + ', ' + glDispatchY + ')');
+      gl.dispatchCompute(glDispatchX, glDispatchY, 1)
+      gl.memoryBarrier(gl.TEXTURE_UPDATE_BARRIER_BIT | gl.SHADER_IMAGE_ACCESS_BARRIER_BIT | gl.TEXTURE_FETCH_BARRIER_BIT)
+    }
+  }
+
 
   /**
    * Runs fragment shader program, after binding output, inputs, and uniforms

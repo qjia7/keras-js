@@ -86,7 +86,9 @@ export default class Tensor {
 
     const shape = this.glTextureShape
     const data = this.tensor.data
-    gl.texImage2D(textureTarget, 0, textureInternalFormat, shape[1], shape[0], 0, textureFormat, textureType, data)
+   // gl.texImage2D(textureTarget, 0, textureInternalFormat, shape[1], shape[0], 0, textureFormat, textureType, data)
+    gl.texStorage2D(textureTarget, 1, textureInternalFormat, shape[1], shape[0])
+    gl.texSubImage2D(textureTarget, 0, 0, 0, shape[1], shape[0], textureFormat, textureType, data)
 
     // clamp to edge
     gl.texParameteri(textureTarget, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
@@ -123,7 +125,9 @@ export default class Tensor {
       } else {
         data = this.tensor.data.slice(offset, offset + shape[0] * shape[1])
       }
-      gl.texImage2D(textureTarget, 0, textureInternalFormat, shape[1], shape[0], 0, textureFormat, textureType, data)
+      //  gl.texImage2D(textureTarget, 0, textureInternalFormat, shape[1], shape[0], 0, textureFormat, textureType, data)
+      gl.texStorage2D(textureTarget, 1, textureInternalFormat, shape[1], shape[0])
+      gl.texSubImage2D(textureTarget, 0, 0, 0, shape[1], shape[0], textureFormat, textureType, data)
 
       // clamp to edge
       gl.texParameteri(textureTarget, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)

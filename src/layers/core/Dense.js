@@ -4,7 +4,7 @@ import * as activations from '../../activations'
 import { webgl2 } from '../../WebGL2'
 import { gemv } from 'ndarray-blas-level2'
 import ops from 'ndarray-ops'
-import matMulProgramSource from '../../webgl/matMul.glsl'
+import matMulProgramSource from '../../webgl/matMulCS.glsl'
 import * as activationProgramSources from '../../activations/programSources'
 
 /**
@@ -41,7 +41,7 @@ export default class Dense extends Layer {
 
     // GPU setup
     if (this.gpu) {
-      this.matMulProgram = webgl2.compileProgram(matMulProgramSource)
+      this.matMulProgram = webgl2.compileCSProgram(matMulProgramSource)
       this.activationProgram = webgl2.compileProgram(activationProgramSources[this.activation])
     }
   }
@@ -89,10 +89,12 @@ export default class Dense extends Layer {
     if (this.activation !== 'linear' && !this.outputPreactiv) {
       this.outputPreactiv = new Tensor([], [this.units])
       this.outputPreactiv.createGLTexture({ type: '2d', format: 'float' })
+      this.outputPreactiv.name = 'outColor'
     }
     if (!this.output) {
       this.output = new Tensor([], [this.units])
       this.output.createGLTexture({ type: '2d', format: 'float' })
+      this.output.name = 'outColor'
     }
 
     // Matrix Multiply
@@ -100,7 +102,7 @@ export default class Dense extends Layer {
     if (this.use_bias) {
       matMulInputs.push({ input: this.weights['bias'], name: 'C' })
     }
-    webgl2.runProgram({
+    webgl2.runCSProgram({
       program: this.matMulProgram,
       output: this.activation === 'linear' ? this.output : this.outputPreactiv,
       inputs: matMulInputs,

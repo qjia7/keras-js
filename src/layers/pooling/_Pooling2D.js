@@ -3,7 +3,7 @@ import Tensor from '../../Tensor'
 import { webgl2 } from '../../WebGL2'
 import * as tensorUtils from '../../utils/tensorUtils'
 import ops from 'ndarray-ops'
-import poolingProgramSource from './_Pooling.glsl'
+import poolingProgramSource from './_PoolingCS.glsl'
 import poolingFragmentsProgramSource from './_Pooling.fragments.glsl'
 
 /**
@@ -48,7 +48,7 @@ export default class _Pooling2D extends Layer {
 
     // GPU setup
     if (this.gpu) {
-      this.poolingProgram = webgl2.compileProgram(poolingProgramSource)
+      this.poolingProgram = webgl2.compileCSProgram(poolingProgramSource)
       this.poolingFragmentsProgram = webgl2.compileProgram(poolingFragmentsProgramSource)
     }
   }
@@ -301,6 +301,7 @@ export default class _Pooling2D extends Layer {
       this.output.is2DReshaped = true
       this.output.originalShape = this.outputShape
       this.output.indicesForReshaped = tensorUtils.createIndicesFor2DReshaped(this.outputShape, false, -1)
+      this.output.name = 'outColor'
     }
 
     const input = x.is2DReshaped || x.is2DSquareReshaped ? x : this.tiledInput
@@ -324,7 +325,7 @@ export default class _Pooling2D extends Layer {
       })
       input.removeGLTextureFragmentsAsColStack()
     } else {
-      webgl2.runProgram({
+      webgl2.runCSProgram({
         program: this.poolingProgram,
         output: this.output,
         inputs: [{ input: input, name: 'x' }, { input: this.poolIndexMap, name: 'poolIndexMap' }],

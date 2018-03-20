@@ -2,7 +2,7 @@ import Layer from '../../Layer'
 import Tensor from '../../Tensor'
 import { webgl2 } from '../../WebGL2'
 import ops from 'ndarray-ops'
-import programSource from './BatchNormalization.glsl'
+import programSource from './BatchNormalizationCS.glsl'
 
 /**
  * BatchNormalization layer class
@@ -41,7 +41,7 @@ export default class BatchNormalization extends Layer {
 
     // GPU setup
     if (this.gpu) {
-      this.program = webgl2.compileProgram(programSource)
+      this.program = webgl2.compileCSProgram(programSource)
     }
   }
 
@@ -177,6 +177,7 @@ export default class BatchNormalization extends Layer {
     if (!this.output) {
       this.output = new Tensor([], x.glTextureShape)
       this.output.createGLTexture({ type: '2d', format: 'float', supportsTextureFragments: true })
+      this.output.name = 'outColor'
       if (x.is1D) {
         this.output.is1D = x.is1D
       } else if (x.is2DReshaped || x.is2DSquareReshaped) {
@@ -204,7 +205,7 @@ export default class BatchNormalization extends Layer {
       { value: +this.scale, type: 'bool', name: 'scale' },
       { value: +this.center, type: 'bool', name: 'center' }
     ]
-    webgl2.runProgram({
+    webgl2.runCSProgram({
       program: this.program,
       output: this.output,
       inputs: programInputs,

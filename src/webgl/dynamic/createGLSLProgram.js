@@ -1,4 +1,4 @@
-import add from './merge/add'
+import add from './merge/addCS'
 import average from './merge/average'
 import concatenate from './merge/concatenate'
 import maximum from './merge/maximum'

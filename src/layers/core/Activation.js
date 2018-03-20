@@ -27,7 +27,7 @@ export default class Activation extends Layer {
 
     // GPU setup
     if (this.gpu) {
-      this.program = webgl2.compileProgram(activationProgramSources[this.activation])
+      this.program = webgl2.compileCSProgram(activationProgramSources[this.activation])
     }
   }
 
@@ -74,6 +74,7 @@ export default class Activation extends Layer {
     if (!this.output) {
       this.output = new Tensor([], x.glTextureShape)
       this.output.createGLTexture({ type: '2d', format: 'float', supportsTextureFragments: true })
+      this.output.name = 'outColor'
       if (x.is1D) {
         this.output.is1D = x.is1D
       } else if (x.is2DReshaped || x.is2DSquareReshaped) {
@@ -87,7 +88,7 @@ export default class Activation extends Layer {
       }
     }
 
-    webgl2.runProgram({
+    webgl2.runCSProgram({
       program: this.program,
       output: this.output,
       inputs: [{ input: x, name: 'x' }],

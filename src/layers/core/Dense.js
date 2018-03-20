@@ -42,7 +42,7 @@ export default class Dense extends Layer {
     // GPU setup
     if (this.gpu) {
       this.matMulProgram = webgl2.compileCSProgram(matMulProgramSource)
-      this.activationProgram = webgl2.compileProgram(activationProgramSources[this.activation])
+      this.activationProgram = webgl2.compileCSProgram(activationProgramSources[this.activation])
     }
   }
 
@@ -111,7 +111,7 @@ export default class Dense extends Layer {
 
     // Activation
     if (this.activation !== 'linear') {
-      webgl2.runProgram({
+      webgl2.runCSProgram({
         program: this.activationProgram,
         output: this.output,
         inputs: [{ input: this.outputPreactiv, name: 'x' }]

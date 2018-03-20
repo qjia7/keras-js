@@ -43,7 +43,7 @@ export default class Add extends _Merge {
     if (!this.mergeProgram) {
       const shape = inputs[0].glTextureFragments ? inputs[0].glTextureFragmentShape : inputs[0].glTextureShape
       const mergeProgramSource = createGLSLProgram('add', inputs.length, shape)
-      this.mergeProgram = webgl2.compileProgram(mergeProgramSource)
+      this.mergeProgram = webgl2.compileCSProgram(mergeProgramSource)
     }
     super._callGPU(inputs)
   }

@@ -1,7 +1,7 @@
 import Layer from '../../Layer'
 import Tensor from '../../Tensor'
 import { webgl2 } from '../../WebGL2'
-import flattenProgramSource from './Flatten.glsl'
+import flattenProgramSource from './FlattenCS.glsl'
 import flattenFragmentsProgramSource from './Flatten.fragments.glsl'
 
 /**
@@ -20,7 +20,7 @@ export default class Flatten extends Layer {
 
     // GPU setup
     if (this.gpu) {
-      this.flattenProgram = webgl2.compileProgram(flattenProgramSource)
+      this.flattenProgram = webgl2.compileCSProgram(flattenProgramSource)
       this.flattenFragmentsProgram = webgl2.compileProgram(flattenFragmentsProgramSource)
     }
   }
@@ -72,6 +72,7 @@ export default class Flatten extends Layer {
     if (!this.output) {
       this.output = new Tensor([], [x.glTextureShape.reduce((a, b) => a * b, 1)])
       this.output.createGLTexture({ type: '2d', format: 'float' })
+      this.output.name = 'outColor'
     }
 
     if (x.glTextureFragments) {
@@ -89,7 +90,7 @@ export default class Flatten extends Layer {
       })
       x.removeGLTextureFragmentsAsColStack()
     } else {
-      webgl2.runProgram({
+      webgl2.runCSProgram({
         program: this.flattenProgram,
         output: this.output,
         inputs: [{ input: x, name: 'x' }],
